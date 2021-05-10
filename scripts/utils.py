@@ -47,17 +47,21 @@ def read_sses(label_dir, image_size, label="all", shrink=0):
             obj = pd.json_normalize(obj)
             objects.append(obj)
     objects = pd.concat(objects)
+    max_class_idx = max(objects["classIndex"])
+    class_idx = objects["classIndex"].copy()
+    class_idx[class_idx == 0] = max_class_idx + 1
+    objects["classIndex"] = class_idx
     if label != "all":
         l = objects.label.copy()
         i = objects.classIndex.copy()
         l[objects.label.isin(label) == False] = "その他"
-        i[objects.label.isin(label) == False] = 9999
+        i[objects.label.isin(label) == False] = 9999 # 9999 = その他
         objects.label = l
         objects.classIndex = i
 
     polygons = list(objects["polygon"])
     labels = objects["classIndex"]
-    image = np.zeros([image_size[1], image_size[0], 3])
+    image = np.zeros([image_size[1], image_size[0], 3]) # 0 = unlabelled
     for p, l in zip(polygons, labels):
         polygon = []
         for point in p:
@@ -79,7 +83,7 @@ def read_sses(label_dir, image_size, label="all", shrink=0):
     labels = objects[["classIndex", "label"]].drop_duplicates()
     return image, labels
 
-def set_patches(label_dir, image_dir, out_dir, kernel_size, batch_size=5000, label="all", unlabelled=False, shrink=0):
+def set_patches(label_dir, image_dir, out_dir, kernel_size, batch_size=50, label="all", unlabelled=False, shrink=0):
     """
     Setting up data folders for semi-supervised image segmentation of time-lapse photographs.
     

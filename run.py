@@ -1,8 +1,8 @@
 from scripts.utils import set_patches
 from scripts.simple_lstm import SimpleLSTM
-#set_patches("data/train/2015/labels", "data/train/2015/images", "data/train/2015/patches/", (3,3), batch_size=50, unlabelled=False, shrink=0.0)
+set_patches("data/train/2010/labels", "data/train/2010/images", "data/train/2010/patches/", (3,3), batch_size=50, unlabelled=False, shrink=5)
 
-lstm = SimpleLSTM("data/train/2015/patches", "data/train/2015/labels", 200, device="cpu", shrink = 10)
+lstm = SimpleLSTM("data/train/2010/patches", "data/train/2010/labels", 200, device="cpu", shrink = 5)
 lstm.train(500, "simple_lstm")
 
 lstm.draw("data/2015/source/", "simple_lstm_3x3_2015.png", (3,3), 50000)
