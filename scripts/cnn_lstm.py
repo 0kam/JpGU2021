@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from torch import optim
+from torch.nn.modules.conv import Conv1d
 from scripts.utils import read_sses, DrawDS, load_npy, LabelledDS, cf_labelled, cf_unlabelled, draw_legend, draw_teacher
 from torchvision.datasets import DatasetFolder
 from torch.utils.data import DataLoader
@@ -13,31 +14,43 @@ from tensorboardX import SummaryWriter
 from matplotlib import pyplot as plt
 from PIL import Image
 
-class LSTMClassifier(nn.Module):
-    def __init__(self, x_dim, y_dim):
-        super(LSTMClassifier, self).__init__()
-        self.h_dim = int((x_dim + y_dim) / 2)
-        self.lstm = nn.LSTM(x_dim, self.h_dim, batch_first=True)
+class CRNNClassifier(nn.Module):
+    def __init__(self, x_shape, y_dim):
+        super(CRNNClassifier, self).__init__()
+        self.x_shape = x_shape
+        self.conv1 = nn.Conv2d(3, 8, (3,3), 1)
+        self.bn2d_1 = nn.BatchNorm2d(8)
+        self.prelu1 = nn.PReLU()
+        self.maxpool1 = nn.MaxPool2d((3,3), 1)       
+        conv_out_shape = (x_shape[2]-4) * (x_shape[3]-4) * 8
+        self.h_dim = int((conv_out_shape + y_dim) / 2)
+        self.lstm = nn.LSTM(conv_out_shape, self.h_dim, batch_first=True)
         self.bn1 = nn.BatchNorm1d(self.h_dim)
         self.do1 = nn.Dropout(0.4)
         self.fc1 = nn.Linear(self.h_dim, self.h_dim)
-        self.prelu = nn.PReLU()
+        self.prelu2 = nn.PReLU()
         self.bn2 = nn.BatchNorm1d(self.h_dim)
         self.do2 = nn.Dropout(0.4)
         self.fc2 = nn.Linear(self.h_dim, y_dim)
 
     def forward(self, x):
-        _, h = self.lstm(x)
+        h = x.view((-1,) + self.x_shape[1:4]) # (batch_size+time_seriese, chunnel, w, h)
+        h = self.conv1(h)
+        h = self.prelu1(h)
+        h = self.bn2d_1(h)
+        h = self.maxpool1(h)
+        h = h.view((x.shape[0], self.x_shape[0], -1))
+        _, h = self.lstm(h)
         h = h[0].view(-1, self.h_dim)
         h = self.bn1(h)
         h = self.do1(h)
-        h = self.prelu(self.fc1(h))
+        h = self.prelu2(self.fc1(h))
         h = self.bn2(h)
         h = self.do2(h)
         return F.softmax(self.fc2(h), dim=1)
 
-class SimpleLSTM():
-    def __init__(self, data_dir, labels_dir, batch_size,device="cuda", num_workers=20, label="all", shrink=0.0):
+class CNNLSTM():
+    def __init__(self, data_dir, labels_dir, kernel_size, batch_size,device="cuda", num_workers=20, label="all", shrink=0.0):
         self.classes = [Path(n).name for n in glob(data_dir + "/labelled/*")]
         self.device = device
         _, labels = read_sses(labels_dir, (9999,9999), label=label)
@@ -51,13 +64,13 @@ class SimpleLSTM():
         train_dataset = torch.utils.data.Subset(labelled, train_indices)
         val_dataset = torch.utils.data.Subset(labelled, val_indices)
         x, y = train_dataset[0]
-        self.x_dim = x.shape[2]
+        self.x_shape = (x.shape[1],) + (3,) + kernel_size
         self.y_dim = len(self.classes)
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=cf_labelled)
         self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=cf_labelled)
         self.class_to_idx = self.train_loader.dataset.dataset.dataset.class_to_idx
 
-        self.model = LSTMClassifier(self.x_dim, self.y_dim).to(self.device)
+        self.model = CRNNClassifier(self.x_shape, self.y_dim).to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
         self.loss_cls = nn.CrossEntropyLoss()
         self.best_test_loss = 9999
@@ -126,7 +139,7 @@ class SimpleLSTM():
             train_loss = self._train(epoch)
             val_loss, recall, precision = self._val(epoch)
             if val_loss < self.best_test_loss:
-                self.best_model = LSTMClassifier(self.x_dim, self.y_dim).to(self.device)
+                self.best_model = CRNNClassifier(self.x_shape, self.y_dim).to(self.device)
                 self.best_model.load_state_dict(self.model.state_dict())
                 self.best_recall = recall
                 self.best_prec = precision

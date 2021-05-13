@@ -120,7 +120,7 @@ def set_patches(label_dir, image_dir, out_dir, kernel_size, batch_size=50, label
         tensors[str(label)] = []
         if os.path.exists(out_dir + "/labelled/" + str(label)) is False:
             os.mkdir(out_dir + "/labelled/" + str(label))
-    images = torch.stack([to_tensor(Image.open(f)) for f in glob(image_dir + "/*")], dim = 0)
+    images = torch.stack([to_tensor(Image.open(f)) for f in sorted(glob(image_dir + "/*"))], dim = 0)
     i = 0
     if unlabelled:
         for v in tqdm(range(h)):
@@ -219,7 +219,7 @@ class DrawDS(Dataset):
         with Image.open(f) as img:
             self.size = img.size
             self.data_length = img.width*img.height
-        self.target_images = torch.stack([to_tensor(Image.open(f)) for f in glob(self.image_dir + "/*")], dim = 0)
+        self.target_images = torch.stack([to_tensor(Image.open(f)) for f in sorted(glob(self.image_dir + "/*"))], dim = 0)
     
     def __len__(self):
         return self.data_length

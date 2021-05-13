@@ -1,13 +1,13 @@
 from scripts.utils import set_patches
-from scripts.simple_lstm import SimpleLSTM
+from scripts.cnn_lstm import CNNLSTM
 set_patches("data/train2/2010/labels", "data/train2/2010/images_2010", "data/train2/patches9x9/", (9,9), batch_size=50, unlabelled=False, shrink=0)
 set_patches("data/train2/2010/labels", "data/train2/2020/images_2020", "data/train2/patches9x9/", (9,9), batch_size=50, unlabelled=False, shrink=5)
 
-lstm = SimpleLSTM("data/train2/patches9x9", "data/train2/2010/labels", 200, device="cuda", shrink = 5)
+lstm = CNNLSTM("data/train2/patches9x9", "data/train2/2010/labels", (9,9), 200, device="cuda", shrink = 5)
 lstm.draw_legend("results/legend.png")
 lstm.draw_teacher("results/teacher_2010_shrink5.png", (5616,3744))
 
-lstm.train(1500, "simple_lstm")
+lstm.train(1500, "cnn_lstm")
 
 res2010, _ = lstm.draw("data/train2/2010/images_2010", "results/simple_lstm_9x9_2010.png", (9,9), 50000)
 res2020, _ = lstm.draw("data/train2/2020/images_2020", "results/simple_lstm_9x9_2020.png", (9,9), 50000)
