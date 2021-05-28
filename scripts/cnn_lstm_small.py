@@ -13,21 +13,23 @@ from tensorboardX import SummaryWriter
 from matplotlib import pyplot as plt
 from PIL import Image
 
+# Reshape 1D tensors to 2D patches
 class AsImage(object):
-    def __init__(self, kernel_size):
-        self.kernel_size = kernel_size
+    def __init__(self, x_shape):
+        self.x_shape = x_shape
     def __call__(self, x):
-        return x.view((-1,) + self.kernel_size)
+        return x.view((-1,) + self.x_shape[1:4])
 
 class CRNNClassifier(nn.Module):
     def __init__(self, x_shape, y_dim):
         super(CRNNClassifier, self).__init__()
         self.x_shape = x_shape
+        self.do2d_1 = nn.Dropout2d(0.4)
         self.conv1 = nn.Conv2d(3, 8, (3,3), 1)
         self.bn2d_1 = nn.BatchNorm2d(8)
         self.prelu1 = nn.PReLU()
-        self.maxpool1 = nn.MaxPool2d((3,3), 1)       
-        conv_out_shape = (x_shape[2]-4) * (x_shape[3]-4) * 8
+        #self.maxpool1 = nn.MaxPool2d((3,3), 1)       
+        conv_out_shape = (x_shape[2]-2) * (x_shape[3]-2) * 8
         self.h_dim = int((conv_out_shape + y_dim) / 2)
         self.lstm = nn.LSTM(conv_out_shape, self.h_dim, batch_first=True)
         self.bn1 = nn.BatchNorm1d(self.h_dim)
@@ -39,10 +41,11 @@ class CRNNClassifier(nn.Module):
         self.fc2 = nn.Linear(self.h_dim, y_dim)
 
     def forward(self, x):
-        h = self.conv1(x)
+        h = self.do2d_1(x)
+        h = self.conv1(h)
         h = self.prelu1(h)
         h = self.bn2d_1(h)
-        h = self.maxpool1(h)
+        #h = self.maxpool1(h)
         h = h.view((-1, self.x_shape[0], h.shape[1]*h.shape[2]*h.shape[3]))
         _, h = self.lstm(h)
         h = h[0].view(-1, self.h_dim)
@@ -71,11 +74,10 @@ class CNNLSTM():
         self.x_shape = (x.shape[1],) + (3,) + kernel_size
         self.y_dim = len(self.classes)
         self.tf_train = transforms.Compose([
-            AsImage(self.x_shape[1:4])#,
-            #transforms.RandomAffine((0,360), translate=(0.1,0.1), scale=(0.8, 1.1), shear=(30,30))
+            AsImage(self.x_shape)
         ])
         self.tf_valid = transforms.Compose([
-            AsImage(self.x_shape[1:4])
+            AsImage(self.x_shape)
         ])
         self.train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, collate_fn=cf_labelled)
         self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, collate_fn=cf_labelled)
