@@ -1,14 +1,14 @@
 from scripts.utils import set_patches
 from scripts.cnn_lstm import CNNLSTM
 import tensorboardX
-set_patches("data/train4/2010/labels", "data/train4/2010/images_2010_R", "data/train4/patches9x9/", (9,9), batch_size=50, unlabelled=False, shrink=5)
-set_patches("data/train4/2010/labels", "data/train4/2020/images_2020_R", "data/train4/patches9x9/", (9,9), batch_size=50, unlabelled=False, shrink=5)
+# set_patches("data/train4/2010/labels", "data/train4/2010/images_2010_R", "data/train4/patches9x9/", (9,9), batch_size=50, unlabelled=False, shrink=5)
+# set_patches("data/train4/2010/labels", "data/train4/2020/images_2020_R", "data/train4/patches9x9/", (9,9), batch_size=50, unlabelled=False, shrink=5)
 
 lstm = CNNLSTM("data/train4/patches9x9", "data/train4/2010/labels", (9,9), 200, device="cuda", shrink = 5)
 lstm.draw_legend("results/legend.png")
 lstm.draw_teacher("results/teacher_2010_shrink0.png", (5616,3744))
 
-lstm.train(100, "cnn_lstm9x9")
+lstm.train(200, "cnn_lstm9x9")
 
 res2010, _ = lstm.draw("data/train4/2010/images_2010_R", "results/cnn_9x9_R2_2010.png", (9,9), 50000)
 res2020, _ = lstm.draw("data/train4/2020/images_2020_R", "results/cnn_9x9_R2_2020.png", (9,9), 50000)
@@ -20,8 +20,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pylab as pl
 import cv2
-np.save("results/res2010_cnn_9x9_R2.npy", res2010)
-np.save("results/res2020_cnn_9x9_R2.npy", res2020)
+np.save("results/res2010_cnn_9x9_R3.npy", res2010)
+np.save("results/res2020_cnn_9x9_R3.npy", res2020)
 
 lstm.labels
 lstm.class_to_idx

@@ -31,11 +31,11 @@ class CRNNClassifier(nn.Module):
         self.h_dim = int((conv_out_shape + y_dim) / 2)
         self.lstm = nn.LSTM(conv_out_shape, self.h_dim, batch_first=True)
         self.bn1 = nn.BatchNorm1d(self.h_dim)
-        self.do1 = nn.Dropout(0.4)
+        self.do1 = nn.Dropout(0.0)
         self.fc1 = nn.Linear(self.h_dim, self.h_dim)
         self.prelu2 = nn.PReLU()
         self.bn2 = nn.BatchNorm1d(self.h_dim)
-        self.do2 = nn.Dropout(0.4)
+        self.do2 = nn.Dropout(0.0)
         self.fc2 = nn.Linear(self.h_dim, y_dim)
 
     def forward(self, x):
@@ -72,7 +72,7 @@ class CNNLSTM():
         self.y_dim = len(self.classes)
         self.tf_train = transforms.Compose([
             AsImage(self.x_shape[1:4])#,
-            #transforms.RandomAffine((0,360), translate=(0.1,0.1), scale=(0.8, 1.1), shear=(30,30))
+            #transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2)
         ])
         self.tf_valid = transforms.Compose([
             AsImage(self.x_shape[1:4])

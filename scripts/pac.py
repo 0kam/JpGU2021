@@ -11,7 +11,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import PassiveAggressiveClassifier
-from sklearn.decomposition import PCA
 
 
 def cf_labelled(batch):
@@ -24,7 +23,7 @@ def cf_labelled(batch):
     y = np.asarray(y)
     return x, y
 
-class SVM():
+class PAC():
     def __init__(self, data_dir, labels_dir, batch_size, num_workers=10, label="all", shrink=0.0):
         self.classes = [Path(n).name for n in glob(data_dir + "/labelled/*")]
         _, labels = read_sses(labels_dir, (9999,9999), label=label)
